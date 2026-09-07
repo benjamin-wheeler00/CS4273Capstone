@@ -1,7 +1,7 @@
 # Docker Deployment Guide
 
 This is the Docker and offline deployment guide for the EMS Call Analysis Tool.
-The Docker setup lives under `CallAnalysisTool/` and is split into four services:
+The Docker setup lives under `/` and is split into four services:
 
 - `frontend`: Next.js web app built by `frontend/Dockerfile.node`
 - `backend`: Flask API built by `backend/Dockerfile.flask`
@@ -24,7 +24,7 @@ The app can run offline after its Docker images and model-cache volumes have bee
 ## Project Layout
 
 ```text
-CallAnalysisTool/
+/
 ├── .env  # Not tracked in git
 ├── docker-compose.yml
 ├── export_all.sh
@@ -39,11 +39,11 @@ CallAnalysisTool/
     └── Dockerfile.node
 ```
 
-Run all Docker Compose commands from `CallAnalysisTool/`, not the repository root.
+Run all Docker Compose commands from the repository root.
 
 ## Configuration
 
-Edit `CallAnalysisTool/.env` before building or starting containers.
+Edit `.env` before building or starting containers.
 
 Important values:
 
@@ -71,7 +71,6 @@ NEXT_PUBLIC_API_URL=http://your-backend-host:5001
 Build on a machine with internet access:
 
 ```sh
-cd CallAnalysisTool
 docker compose build
 ```
 
@@ -108,7 +107,7 @@ docker compose down
 
 The offline bundle needs both images and named volumes. Images alone are not enough because the Compose setup uses named volumes for model caches.
 
-From `CallAnalysisTool/`, run:
+Run:
 
 ```sh
 sh export_all.sh
@@ -119,7 +118,7 @@ When prompted, export both images and volumes.
 The script writes artifacts to:
 
 ```text
-CallAnalysisTool/offline_backup/
+offline_backup/
 ```
 
 Expected image archives:
@@ -137,7 +136,7 @@ Expected volume archives:
 - `callanalysistool_models_data.tar.gz`
 - `callanalysistool_torch_cache.tar.gz`
 
-Copy `CallAnalysisTool/` to the offline target machine with:
+Copy to the offline target machine with:
 
 - `docker-compose.yml`
 - `.env`
@@ -149,7 +148,7 @@ The full source tree may be helpful, but the offline runtime mainly needs those 
 
 ## Offline Import
 
-On the offline target machine, open Git Bash in `CallAnalysisTool/`.
+On the offline target machine, open Git Bash.
 
 Import images first:
 
@@ -176,7 +175,7 @@ Verify in Docker Desktop or with Docker commands that these volumes exist and ar
 
 ## Offline Start
 
-Set offline flags in `CallAnalysisTool/.env`:
+Set offline flags in `.env`:
 
 ```text
 TRANSFORMERS_OFFLINE=1
@@ -184,7 +183,7 @@ HF_HUB_OFFLINE=1
 OLLAMA_MODEL=llama3.1:8b
 ```
 
-Start the app from `CallAnalysisTool/`:
+Start the app:
 
 ```sh
 docker compose up

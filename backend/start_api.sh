@@ -1,10 +1,10 @@
 #!/bin/sh
-# Start the backend API from the CallAnalysisTool/backend directory.
+# Start the backend API from the backend directory.
 
 set -eu
 
 if [ "$(basename "$PWD")" != "backend" ]; then
-    echo "Wrong directory. Run this script from CallAnalysisTool/backend." >&2
+    echo "Wrong directory. Run this script from backend." >&2
     exit 1
 fi
 

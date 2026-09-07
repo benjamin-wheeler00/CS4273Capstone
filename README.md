@@ -12,7 +12,7 @@ The EMS Call Analysis Tool helps review emergency medical dispatch calls for pro
 6. Save the audio, CDR, transcript, and grades in a dispatcher-organized output folder.
 7. Review records in the frontend dashboard, edit transcripts or grades, change nature codes, regrade records, and print call reports.
 
-The system is designed for local processing. Audio, transcripts, and grades are stored in `CallAnalysisTool/backend/output/`.
+The system is designed for local processing. Audio, transcripts, and grades are stored in `backend/output/`.
 
 ---
 
@@ -42,55 +42,54 @@ The system is designed for local processing. Audio, transcripts, and grades are 
 GroupL_CS4273Capstone/
 ├── README.md           # This file
 ├── DOCKER_README.md    # Information pertaining to docker setup and offline deployment
-└── CallAnalysisTool/
-    ├── .env                # Environmental variables, not tracked in git
-    ├── docker-compose.yml  # Coordinates all of the dockerfiles, defines volumes
-    ├── export_all.sh       # Script to export docker container and volumes, see DOCKER_README.md
-    ├── import_all.sh       # Script to import docker container and volumes, see DOCKER_README.md
-    ├── backend/
-    │   ├── install_api_requirements.sh  # Script that verifies and installs API requirements 
-    │   ├── start_api.sh                 # Script to start the API
-    │   ├── requirements.txt             # Python requirements
-    │   ├── Dockerfile.flask             # Flask (api) docker configuration
-    │   ├── Dockerfile.ollama            # Ollama server docker configuration
-    │   ├── Dockerfile.whisper           # Whisper docker configuration
-    │   ├── api/
-    │   │   ├── app.py
-    │   │   ├── routes/
-    │   │   │   ├── dispatchers.py  # Routes to get dispather and record information
-    │   │   │   ├── files.py        # Routes to GET and PUT files
-    │   │   │   ├── regrade.py      # Route for regrading records
-    │   │   │   └── upload.py       # Route to grade new records
-    │   │   └── services/
-    │   │       ├── ai_grader.py               # Logic for AI grading
-    │   │       ├── nature_codes.py            # Helpers for using nature_codes_master.json
-    │   │       ├── ollama_handler.py          # Helpers for using ollama (prompt, chat)
-    │   │       ├── prompts.py                 # Helpers and constants for AI prompts
-    │   │       ├── speaker_separation.py      # Logic for speaker separation (diarization)
-    │   │       ├── text_handler.py            # Helpers for text files/JSON parsing and manipulation
-    │   │       └── whisperx_transcriber.py    # Helpers for using Whisper
-    │   ├── data/
-    │   │   ├── EMSQA.csv                   # Raw question and nature code data
-    │   │   └── nature_codes_master.json    # JSON-structured question and nature code data
-    │   ├── output/
-    │   │   ├── _tmp/            # Temp directory where intermediate processing happens
-    │   │   └── {dispatcher}/    # Folder for a given dispatcher, contains all their records
-    │   │       └── {date}_{time}_{nature_code}/   # Folder for a give record
-    │   └── tests/               # Testing stuff (outdated or broken)
-    │       ├── test_manual.sh
-    │       └── test_transcript.json
-    └── frontend/
-        ├── package.json      # Node packages
-        ├── Dockerfile.node   # Frontend docker configuration
-        ├── src/
-        │   ├── app/
-        │   │   ├── evaluate/
-        │   │   ├── help/
-        │   │   └── records/
-        │   ├── components/
-        │   ├── lib/
-        │   └── types/
-        └── public/
+├── .env                # Environmental variables, not tracked in git
+├── docker-compose.yml  # Coordinates all of the dockerfiles, defines volumes
+├── export_all.sh       # Script to export docker container and volumes, see DOCKER_README.md
+├── import_all.sh       # Script to import docker container and volumes, see DOCKER_README.md
+├── backend/
+│   ├── install_api_requirements.sh  # Script that verifies and installs API requirements 
+│   ├── start_api.sh                 # Script to start the API
+│   ├── requirements.txt             # Python requirements
+│   ├── Dockerfile.flask             # Flask (api) docker configuration
+│   ├── Dockerfile.ollama            # Ollama server docker configuration
+│   ├── Dockerfile.whisper           # Whisper docker configuration
+│   ├── api/
+│   │   ├── app.py
+│   │   ├── routes/
+│   │   │   ├── dispatchers.py  # Routes to get dispather and record information
+│   │   │   ├── files.py        # Routes to GET and PUT files
+│   │   │   ├── regrade.py      # Route for regrading records
+│   │   │   └── upload.py       # Route to grade new records
+│   │   └── services/
+│   │       ├── ai_grader.py               # Logic for AI grading
+│   │       ├── nature_codes.py            # Helpers for using nature_codes_master.json
+│   │       ├── ollama_handler.py          # Helpers for using ollama (prompt, chat)
+│   │       ├── prompts.py                 # Helpers and constants for AI prompts
+│   │       ├── speaker_separation.py      # Logic for speaker separation (diarization)
+│   │       ├── text_handler.py            # Helpers for text files/JSON parsing and manipulation
+│   │       └── whisperx_transcriber.py    # Helpers for using Whisper
+│   ├── data/
+│   │   ├── EMSQA.csv                   # Raw question and nature code data
+│   │   └── nature_codes_master.json    # JSON-structured question and nature code data
+│   ├── output/
+│   │   ├── _tmp/            # Temp directory where intermediate processing happens
+│   │   └── {dispatcher}/    # Folder for a given dispatcher, contains all their records
+│   │       └── {date}_{time}_{nature_code}/   # Folder for a give record
+│   └── tests/               # Testing stuff (outdated or broken)
+│       ├── test_manual.sh
+│       └── test_transcript.json
+└── frontend/
+    ├── package.json      # Node packages
+    ├── Dockerfile.node   # Frontend docker configuration
+    ├── src/
+    │   ├── app/
+    │   │   ├── evaluate/
+    │   │   ├── help/
+    │   │   └── records/
+    │   ├── components/
+    │   ├── lib/
+    │   └── types/
+    └── public/
 ```
 
 Important runtime folders and files:
@@ -99,7 +98,7 @@ Important runtime folders and files:
 - `backend/data/EMSQA.csv`: protocol source data retained with the backend data set.
 - `backend/output/`: saved call records, grouped by dispatcher and call folder.
 - `frontend/src/lib/api.ts`: frontend API client and endpoint mapping.
-- `CallAnalysisTool/.env`: Docker and runtime environment variables.
+- `.env`: Docker and runtime environment variables.
 
 ---
 
@@ -116,7 +115,7 @@ Important runtime folders and files:
 
 ### Backend Setup
 
-Run backend commands from `CallAnalysisTool/backend`.
+Run backend commands from `backend`.
 
 Prerequisites:
 
@@ -129,7 +128,7 @@ Prerequisites:
 Basic setup:
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 sh install_api_requirements.sh
 ```
 
@@ -144,7 +143,7 @@ The install script:
 Manual equivalent:
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 python3 -m venv venv
 . venv/bin/activate
 python -m pip install -r requirements.txt
@@ -162,14 +161,14 @@ On Windows shells that expose the Windows venv layout, use:
 Start the backend:
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 sh start_api.sh
 ```
 
 Manual equivalent:
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 . venv/bin/activate
 export PYTHONPATH=.
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
@@ -180,12 +179,12 @@ The backend listens on `http://localhost:5001` by default.
 
 ### Frontend Setup
 
-Run frontend commands from `CallAnalysisTool/frontend`.
+Run frontend commands from `frontend`.
 
 The project is configured for pnpm, but npm can also install from the included lockfile.
 
 ```sh
-cd CallAnalysisTool/frontend
+cd frontend
 pnpm install
 pnpm dev
 ```
@@ -193,7 +192,7 @@ pnpm dev
 Alternative with npm:
 
 ```sh
-cd CallAnalysisTool/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -218,14 +217,13 @@ The frontend builds its API base URL from:
 
 ### Docker Setup
 
-The Docker setup lives in `CallAnalysisTool/docker-compose.yml` and uses four services: `frontend`, `backend`, `ollama`, and `whisper`.
+The Docker setup lives in `docker-compose.yml` and uses four services: `frontend`, `backend`, `ollama`, and `whisper`.
 
 For Docker and offline deployment instructions, see [DOCKER_README.md](DOCKER_README.md).
 
 Quick online build:
 
 ```sh
-cd CallAnalysisTool
 docker compose build
 docker compose up
 ```
@@ -488,7 +486,7 @@ There is no dedicated `/api/health` route at the moment. For a simple backend sm
 
 ### Local Environment
 
-When running the backend locally from `CallAnalysisTool/backend`, set:
+When running the backend locally from `backend`, set:
 
 ```sh
 export PYTHONPATH=.
@@ -501,7 +499,7 @@ export HF_TOKEN=your_huggingface_token
 
 ### Docker Environment
 
-Docker variables are defined in `CallAnalysisTool/.env`.
+Docker variables are defined in `.env`.
 
 Common values:
 
@@ -542,7 +540,7 @@ HF_HUB_OFFLINE=1
 
 ### CORS
 
-The Flask app currently allows all origins for all routes. CORS is configured in `CallAnalysisTool/backend/api/app.py`.
+The Flask app currently allows all origins for all routes. CORS is configured in `backend/api/app.py`.
 
 ---
 
@@ -553,14 +551,14 @@ Current verification is mostly manual.
 Backend syntax check:
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 python -m compileall -q api
 ```
 
 Frontend lint:
 
 ```sh
-cd CallAnalysisTool/frontend
+cd frontend
 pnpm lint
 ```
 
@@ -572,10 +570,10 @@ The `backend/tests/` folder contains a sample transcript and a manual shell scri
 
 ### Backend Import Errors
 
-Run the backend from `CallAnalysisTool/backend` and set `PYTHONPATH=.`
+Run the backend from `backend` and set `PYTHONPATH=.`
 
 ```sh
-cd CallAnalysisTool/backend
+cd backend
 export PYTHONPATH=.
 python api/app.py
 ```
@@ -588,7 +586,7 @@ Frontend default: `3000`
 
 Ollama default: `11434`
 
-Change `PORT_BACKEND`, `PORT_FRONTEND`, or `PORT_OLLAMA` in `CallAnalysisTool/.env` for Docker. For local Flask runs, set `PORT` before starting `api/app.py`.
+Change `PORT_BACKEND`, `PORT_FRONTEND`, or `PORT_OLLAMA` in `.env` for Docker. For local Flask runs, set `PORT` before starting `api/app.py`.
 
 ### Ollama Connection Failed
 
@@ -650,7 +648,7 @@ export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
 
 - Treat all call audio, transcripts, CDRs, and grades as sensitive data.
 - The intended workflow uses local transcription and local Ollama inference.
-- Stored outputs remain under `CallAnalysisTool/backend/output/` unless manually moved or exported.
+- Stored outputs remain under `backend/output/` unless manually moved or exported.
 - Be careful when committing or sharing generated output files.
 
 ### Current Limitations

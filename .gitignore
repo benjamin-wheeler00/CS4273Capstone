@@ -39,13 +39,13 @@ instance/
 .webassets-cache
 
 # Processed files
-CallAnalysisTool/backend/output/
+backend/output/
 
 # Test data (Confidential)
-CallAnalysisTool/test_data/
+test_data/
 
 # Docker exports
-CallAnalysisTool/offline_backup*/
+offline_backup*/
 
 # Environmental variables (confidential)
 .env
