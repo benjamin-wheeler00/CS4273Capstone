@@ -22,6 +22,9 @@ a.out
 testCoverage
 testCoverageC
 
+# Rust
+target/
+
 # macOS
 .DS_Store
 Thumbs.db
