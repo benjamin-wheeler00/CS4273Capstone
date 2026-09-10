@@ -9,6 +9,10 @@ from pathlib import Path
 from flask import Flask
 from flask_cors import CORS
 
+# Add the backend directory to Python path so imports work
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
+
 # Local modules
 from api.routes.dispatchers import dispatchers_bp
 from api.routes.files import files_bp
@@ -16,10 +20,6 @@ from api.routes.regrade import regrade_bp
 from api.routes.upload import upload_bp
 from api.services.whisperx_transcriber import initialize_transcriber
 from api.services.ollama_handler import initialize_ollama, check_ollama_ready
-
-# Add the backend directory to Python path so imports work
-backend_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(backend_dir))
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -31,7 +31,7 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 def create_app():
     app = Flask(__name__)
-    
+
     # CORS configuration - allow frontend to connect
     # Supports both Vite (5173) and Next.js (3000) dev servers
     CORS(app, resources={
@@ -41,7 +41,7 @@ def create_app():
             "allow_headers": ["Content-Type", "Authorization"]
         }
     })
-    
+
     # Register blueprints
     app.register_blueprint(dispatchers_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api')
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     app = create_app()
     port = int(os.getenv("PORT", "5001"))
     debug = _env_flag("FLASK_DEBUG", default=os.getenv("FLASK_ENV", "production").lower() == "development")
-    
+
     # Only print banner once (not during reloader restart)
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         print("=" * 60)
@@ -90,4 +90,3 @@ if __name__ == '__main__':
         print("=" * 60)
 
     app.run(host='0.0.0.0', port=port, debug=debug)
-
