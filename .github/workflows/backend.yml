@@ -9,7 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
-      - run: python -m unittest
+      # There are no tests yet
+      # - run: python -m unittest
 
   build:
     needs: test
