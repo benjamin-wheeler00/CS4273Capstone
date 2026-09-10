@@ -3,9 +3,11 @@ on: [push, workflow_dispatch]
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v7
-      - run: cd frontend
       - uses: actions/setup-node@v7
       - run: npm clean-install
       - run: npm test
@@ -23,6 +25,7 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           push: true
+          context: frontend
           tags: |
               ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
               ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}
