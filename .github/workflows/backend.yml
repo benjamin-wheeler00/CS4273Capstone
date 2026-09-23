@@ -32,3 +32,4 @@ jobs:
           context: backend
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          secrets: hf_token=${{ secrets.HF_TOKEN }}
