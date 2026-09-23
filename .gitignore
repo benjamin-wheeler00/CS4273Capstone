@@ -48,8 +48,7 @@ test_data/
 offline_backup*/
 
 # Environmental variables (confidential)
-.env
-.env.local
+*.env
 
 # Other
 *.log
