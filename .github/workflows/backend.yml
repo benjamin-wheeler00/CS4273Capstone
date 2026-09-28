@@ -30,6 +30,7 @@ jobs:
         with:
           push: true
           context: backend
+          build-args: ollama_model=${{ vars.OLLAMA_MODEL }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           secrets: hf_token=${{ secrets.HF_TOKEN }}

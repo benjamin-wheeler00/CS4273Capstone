@@ -2,7 +2,9 @@ FROM python:3.13
 
 WORKDIR /app
 
-ENV TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true DOCKER_CONTAINER=true
+ARG ollama_model
+
+ENV OLLAMA_MODEL=${ollama_model} TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true DOCKER_CONTAINER=true
 
 RUN apt-get update && apt-get install -y \
     ffmpeg
