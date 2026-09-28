@@ -660,12 +660,12 @@ export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
 
 ---
 
-## Team Members (Spring 2026)
+## Team Members (Fall 2026)
 
 | Name | Role | Contact |
 | ---- | ---- | ------- |
-| Luke Chey | Product Owner | lvchey@ou.edu |
-| Brayden Garner | SM1 | bgarner@ou.edu |
-| Keyera Lastrap | SM2 | keyera.l.lastrap-1@ou.edu |
-| Michael Crabb | SM3 | michael.m.crabb-1@ou.edu |
-| Ethan Gulley | SM4 | ethangulley@ou.edu |
+| Benjamin Wheeler | Product Owner | benjamin.c.wheeler-1@ou.edu |
+| Leonardo Luna | SM1 |  |
+| Levin Ward | SM2 |  |
+| Xander McClure | SM3 |  |
+| Markus Means | SM4 |  |
