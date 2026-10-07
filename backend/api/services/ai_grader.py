@@ -76,12 +76,11 @@ def ai_grade_per_question(
     transcript_text: str,
     questions_dict: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Dict[str, str]]:
-    """Grade a transcript one question at a time using a persistent chat."""
+    """Grade each question with shared evidence and an independent chat."""
     system_prompt = get_grading_system_prompt(transcript_text, questions_dict)
 
     print(f"[SYSTEM]\n{system_prompt}\n")
 
-    messages = [{"role": "system", "content": system_prompt}]
     grade_details: Dict[str, Dict[str, str]] = {}
 
     for question_id, question in questions_dict.items():
@@ -97,7 +96,12 @@ def ai_grade_per_question(
 
         user_message = get_single_question_prompt(question)
         print(f"==============================\n[USER]\n{user_message}\n")
-        messages.append({"role": "user", "content": user_message})
+        # Keep the full transcript and sequence for evidence, conditions, and order.
+        # Previous questions' prompts, grades, and retries are not needed here.
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ]
 
         grade_code = None
         reasoning = ""
@@ -109,8 +113,6 @@ def ai_grade_per_question(
             grade_code, reasoning = _extract_grade_and_reasoning(response)
 
             if grade_code:
-                assistant_reply = response.strip()
-                messages.append({"role": "assistant", "content": assistant_reply})
                 grade_details[question_id] = {
                     "code": grade_code,
                     "reasoning": reasoning,
@@ -126,18 +128,15 @@ def ai_grade_per_question(
                     {
                         "role": "user",
                         "content": (
-                            "Your last reply was invalid because it did not include a grade in square brackets "
-                            "at the beginning. Reply again using this exact structure: [X] reasoning text with "
-                            "direct quote(s). Also remember that transcript labels may be incorrect, including "
-                            "cases where the dispatcher appears to talk to themself or does not wait for a proper response."
+                            "Reply again for this question only. Begin with one grade [1]-[6], "
+                            "then concise reasoning and exact supporting quotes with speaker "
+                            "and timestamp. Follow the system grading rules."
                         ),
                     }
                 )
             print("=== RETRYING ===")
 
         if not grade_code:
-            fallback_reply = "[5] " + FALLBACK_REASONING
-            messages.append({"role": "assistant", "content": fallback_reply})
             grade_details[question_id] = {
                 "code": "5",
                 "reasoning": FALLBACK_REASONING,

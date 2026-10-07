@@ -17,7 +17,7 @@ def _format_question_sequence(questions_dict: Dict[str, Dict[str, Any]]) -> str:
     lines = []
 
     for q_id, q in questions_dict.items():
-        # Do not include skipped questions in diplayed sequence
+        # Do not include skipped questions in displayed sequence
         if q.get("Skip_AI_Grading", False):
             continue
 
@@ -30,62 +30,30 @@ def _format_question_sequence(questions_dict: Dict[str, Dict[str, Any]]) -> str:
 
 def get_grading_system_prompt(transcript_text, questions_dict):
     """Build the system prompt used for per-question transcript grading."""
-    return textwrap.dedent(f"""
-        {GRADING_BASE_PROMPT}
-
-        --------------------------------------------------
-        CALL TRANSCRIPT
-        --------------------------------------------------
-
-        {transcript_text}
-
-        --------------------------------------------------
-        CORRECT QUESTION SEQUENCE
-        --------------------------------------------------
-
-        {_format_question_sequence(questions_dict)}
-    """)
+    return (
+        f"{GRADING_BASE_PROMPT}\n\n"
+        f"CALL TRANSCRIPT:\n{transcript_text}\n\n"
+        f"CORRECT QUESTION SEQUENCE:\n{_format_question_sequence(questions_dict)}"
+    )
 
 
 def get_single_question_prompt(question: Dict[str, Any]) -> str:
-    """Build the user prompt for grading one protocol question."""
-    def val(x):
-        """Render missing prompt metadata as a stable placeholder."""
-        return "None" if x is None else str(x)
+    """Provide question metadata; shared grading rules are in the system prompt."""
+    fields = (
+        ("Parent ID", "Parent_Question_ID"),
+        ("Question ID", "Question_ID"),
+        ("Text", "Question_Text"),
+        ("Allowed Alternatives", "Allowed_Alternatives"),
+        ("Condition", "Condition"),
+        ("Situation", "Situation"),
+        ("Scenario", "Scenario"),
+    )
+    lines = ["Grade ONLY this question using the supplied transcript and rules:"]
+    for label, key in fields:
+        value = question.get(key)
+        lines.append(f"{label}: {'None' if value is None else value}")
+    return "\n".join(lines)
 
-    recap = textwrap.dedent("""
-        Evaluate ONLY the protocol question shown below using the full transcript already provided earlier in this conversation.
-
-        Reminder of grading rules:
-        - Assign exactly ONE grade code: [1] (Asked Correctly), [2] (Not Asked), [3] (Asked Incorrectly), [4] (Not as Scripted), [5] (Not Applicable), or [6] (Obvious)
-        - Begin your response with the bracketed grade code
-        - Default assumption: every protocol question shown should have been asked by the dispatcher
-        - The ONLY exception is when the question has a Condition and that Condition is not met by transcript evidence
-        - [3] takes priority if wording changes meaning, even if the question was also out of order
-        - Use [4] only if the wording is acceptable but the sequencing is wrong
-        - Use [6] only if the caller plainly and directly stated the answer to this exact question, with no assumption or context required
-        - Base your decision only on transcript evidence
-        - Speaker labels may be incorrect; if the exchange appears implausible, use the most reasonable interpretation of who is speaking, but do not invent missing dialogue
-        - After the grade, give concise reasoning and include direct supporting quote(s) with speaker, timestamp, and exact wording
-        - Do not grade any other question
-    """)
-
-    core_info = textwrap.dedent(f"""
-        Protocol Question:
-        - Parent ID: {val(question.get("Parent_Question_ID"))}
-        - Question ID: {val(question.get("Question_ID"))}
-        - Text: {val(question.get("Question_Text"))}
-    """)
-
-    metadata = textwrap.dedent(f"""
-        Associated Metadata:
-        - Allowed Alternatives: {val(question.get("Allowed_Alternatives"))}
-        - Condition: {val(question.get("Condition"))}
-        - Situation: {val(question.get("Situation"))}
-        - Scenario: {val(question.get("Scenario"))}
-    """)
-
-    return "\n".join([recap, core_info, metadata])
 
 def get_nature_code_prompt(transcript_path, nature_codes_master):
     """Build the prompt used to classify a transcript into a nature code."""
@@ -107,234 +75,61 @@ def get_nature_code_prompt(transcript_path, nature_codes_master):
 
         keyword_text = ", ".join(map(str, keywords)) if keywords else "None"
 
-        formatted_codes.append(
-            f"Nature Code ID [{code_id}]: {nature_code_name}\n"
-            f"Keywords: {keyword_text}\n"
-        )
+        formatted_codes.append(f"[{code_id}] {nature_code_name}: {keyword_text}")
 
-    nature_codes_text = "\n\n".join(formatted_codes)
-
-    output_format_reminder = textwrap.dedent("""
-    --------------------------------------------------
-    OUTPUT FORMAT REMINDER (IMPORTANT)
-    --------------------------------------------------
-
-    Return your answer in the following format:
-
-    [ID] (NUMBER IN BRACKETS ONLY)
-
-    Reasoning:
-    - CONCISELY explain why this is the correct classification
-    - Reference key parts of the transcript and/or keyword matches
-
-    Possible Confusions (for each):
-    - Nature code name
-    - Why it could apply:
-    - Why it is incorrect:
-
-    (Include 2-3 total confusion comparisons)    
-    """)
-
+    nature_codes_text = "\n".join(formatted_codes)
     return (
         f"{NATURE_CODE_PROMPT}\n\n"
-        f"AVAILABLE NATURE CODES:\n"
-        f"{nature_codes_text}\n\n"
-        f"TRANSCRIPT:\n"
-        f"{transcript_text}\n\n"
-        f"{output_format_reminder}"
+        f"AVAILABLE NATURE CODES (ID, name: keywords):\n{nature_codes_text}\n\n"
+        f"TRANSCRIPT:\n{transcript_text}"
     )
 
 GRADING_BASE_PROMPT = textwrap.dedent("""
-    You are an expert evaluator of emergency dispatch (EMS/911) call transcripts. Your task is to analyze a dispatcher-caller conversation and grade whether a specific protocol question was handled correctly.
+    Grade one EMS/911 protocol question against the transcript and correct question sequence.
+    Use only transcript evidence; do not invent dialogue or infer intent. Evaluate strictly:
+    protocol compliance overrides conversational naturalness. Consider surrounding context
+    only to determine whether an explicit Condition is met.
 
-    You will be given:
-    - A full transcript (with timestamps and speaker labels)
-    - A single protocol question to evaluate
+    Assign exactly one code:
+    [1] Asked Correctly: asked in order with meaning and intent preserved.
+    [2] Not Asked: required question omitted.
+    [3] Asked Incorrectly: wording changes meaning/intent, including leading, biased,
+        or incomplete phrasing. Takes priority over incorrect order.
+    [4] Not As Scripted: acceptable meaning, but out of order.
+    [5] Not Applicable: ONLY when an explicit Condition is unmet by transcript evidence.
+    [6] Obvious: caller directly and plainly stated the answer to this exact question,
+        requiring no assumption, inference, interpretation, or surrounding context,
+        and dispatcher appropriately did not ask again.
 
-    You must assign exactly ONE grade code and justify it using the transcript.
+    Questions are required by default. Without an unmet explicit Condition, an omission
+    is [2], unless [6] applies. Redundancy or apparent lack of necessity does not justify [5].
+    Use the supplied question metadata and Allowed Alternatives when evaluating wording.
 
-    --------------------------------------------------
-    GRADING CODES
-    --------------------------------------------------
+    Speaker labels may be wrong. Reinterpret speaker identity only when the exchange
+    strongly suggests mislabeling (e.g., dispatcher answering their own question).
+    Do not penalize labeling errors or invent dialogue; retain original labels in quotes.
 
-    1 = Asked Correctly  
-    - Question was asked
-    - Correct order
-    - Meaning and intent preserved
-
-    2 = Not Asked  
-    - Question should have been asked based on context
-    - It was omitted
-
-    3 = Asked Incorrectly  
-    - Question was asked, but wording altered meaning or intent
-    - Includes leading, biased, or incomplete phrasing
-
-    4 = Not As Scripted  
-    - Question was asked with acceptable meaning
-    - But asked out of order
-
-    5 = Not Applicable  
-    - Use only when the protocol question has a Condition and transcript evidence shows that Condition was not met
-
-    6 = Obvious  
-    - Caller plainly and directly stated the answer to the given question
-    - No assumption, inference, or surrounding context is required to know the answer
-    - Dispatcher appropriately did not ask it again
-
-    --------------------------------------------------
-    GRADING PRIORITY RULES
-    --------------------------------------------------
-
-    - If wording changes meaning → ALWAYS use (3), even if also out of order
-    - Use (4) ONLY when wording is acceptable but sequencing is wrong
-    - Use (6) ONLY when the answer to the given question is plainly, directly stated by the caller
-    - Do NOT use (6) when the answer requires assumption, inference, interpretation, or surrounding context
-    - Every protocol question presented to you SHOULD HAVE BEEN ASKED BY THE DISPATCHER by default
-    - The ONLY TIME a presented question should not be asked is when it has a Condition and that Condition is not met by transcript evidence
-    - If a question has no Condition, treat it as required and grade an omission as (2), not (5)
-    - Do not infer missing context—base decisions only on transcript evidence
-    - Evaluate strictly—protocol compliance overrides conversational naturalness
-
-    --------------------------------------------------
-    TRANSCRIPT RELIABILITY NOTE
-    --------------------------------------------------
-
-    - Speaker labels in the transcript may sometimes be incorrect
-    - If the transcript appears to show the dispatcher talking to themselves, answering their own question, failing to wait for a caller response when one would normally be expected, or otherwise producing an implausible exchange, consider the possibility that speaker labels were assigned incorrectly
-    - In those cases, evaluate the exchange based on the most reasonable interpretation of who is actually speaking
-    - Do not automatically penalize the dispatcher for transcript labeling errors
-    - However, do not invent missing dialogue; only reinterpret speaker identity when the transcript strongly suggests a labeling mistake
-    - If quoting segments from the transcript you believe are mislabeled, do not relabel them, report them as is
-
-    --------------------------------------------------
-    EVALUATION RULES
-    --------------------------------------------------
-
-    - Do NOT assume intent; evaluate observable behavior only
-    - Do NOT reward "reasonable" phrasing if it violates protocol intent
-    - Identify whether the dispatcher preserved:
-    - Meaning
-    - Order
-    - Necessity (should it have been asked?)
-    - Consider surrounding context in the transcript only when determining whether an explicit Condition was met
-    - Do not mark a question Not Applicable just because it seems unnecessary or conversationally redundant
-
-    --------------------------------------------------
-    OUTPUT FORMAT (STRICT)
-    --------------------------------------------------
-
-    Your response MUST:
-
-    1. Begin with the grade code in brackets (e.g., [1], [2], etc.)
-    2. Follow with a clear explanation of why that grade was assigned
-    3. Include one or more DIRECT QUOTES from the transcript as evidence
-
-    QUOTE REQUIREMENTS:
-    - Quotes must include speaker label, timestamp, and exact wording
-    - Quotes must directly support your reasoning
-    - Do not paraphrase transcript content
-
-    STYLE CONSTRAINTS:
-    - Do not include JSON
-    - Do not include bullet points
-    - Do not include multiple grades
-    - Do not omit explanation or evidence
-    - Keep reasoning concise but specific
-
-    --------------------------------------------------
-    FINAL INSTRUCTION
-    --------------------------------------------------
-
-    Return exactly one grade with supporting reasoning and transcript evidence. No extra formatting or sections.
-""")
+    Output: [code] followed by concise, specific reasoning and direct supporting quotes.
+    Each quote must include the original speaker label, timestamp, and exact wording.
+    No paraphrased quotes, JSON, bullets, sections, extra formatting, or other grades.
+""").strip()
 
 NATURE_CODE_PROMPT = textwrap.dedent("""
-    You are an expert EMS dispatch analyst responsible for determining the correct Nature Code for a 911 call.
+    Select exactly one available Nature Code for this EMS/911 transcript.
+    Use only explicit transcript evidence and the full event timeline. Prioritize the
+    initiating event/root cause over downstream symptoms, even if the cause is clarified
+    later: fall then vomiting -> Falls; allergy then breathing difficulty -> Allergic
+    Reaction; substance exposure then symptoms -> Hazmat/Inhalation.
+    With no clear mechanism, choose the best-fitting symptom code. If causes compete,
+    choose the best-supported cause. Keywords guide classification; context and event
+    sequence matter more than keyword matches. Give one decisive final classification.
 
-    You will be given:
-    - A full dispatcher-caller transcript
-    - A list of Nature Codes with associated keywords and example phrases
-
-    Your task is to determine the MOST APPROPRIATE Nature Code based on the ROOT CAUSE or INITIAL MECHANISM of the call.
-
-    --------------------------------------------------
-    CORE PRINCIPLE (CRITICAL)
-    --------------------------------------------------
-
-    The Nature Code must reflect the FIRST event or mechanism that led to the call, NOT secondary symptoms or later developments.
-
-    Examples:
-    - A fall followed by dizziness or vomiting → Falls (NOT Sick Person or Headache)
-    - Allergic reaction causing breathing difficulty → Allergic Reaction (NOT Breathing Problems)
-    - Substance exposure causing symptoms → Hazmat/Inhalation (NOT Breathing Problems)
-
-    --------------------------------------------------
-    CLASSIFICATION RULES
-    --------------------------------------------------
-
-    - Base your decision ONLY on information explicitly present in the transcript
-    - Identify the earliest clear event/mechanism described
-    - Ignore downstream symptoms when a clear cause exists
-    - If multiple issues are present, prioritize the initiating event
-    - Use keywords and phrases as guidance, not strict rules
-    - Consider the full timeline of the call (events before, during, and after the incident)
-
-    --------------------------------------------------
-    KEYWORD REFERENCE
-    --------------------------------------------------
-
-    Use the provided keyword/phrase list as supporting evidence for classification
-
-    - Match transcript language to keywords where appropriate
-    - Do not rely solely on keyword matching; context and sequence matter more
-
-    --------------------------------------------------
-    EDGE CASE HANDLING
-    --------------------------------------------------
-
-    - If the caller initially describes vague symptoms but later clarifies a cause, use the clarified cause
-    - If no clear mechanism exists, choose the best-fitting symptom-based Nature Code
-    - If two causes are possible, choose the one most strongly supported by the transcript
-
-    --------------------------------------------------
-    CONFUSION ANALYSIS (IMPORTANT)
-    --------------------------------------------------
-
-    After selecting the primary Nature Code, you must also:
-
-    1. Identify 2-3 Nature Codes that this call could reasonably be confused with
-    2. For each:
-    - Briefly explain WHY it might seem applicable
-    - Clearly explain WHY it is NOT the best choice
-
-    Focus especially on:
-    - Symptom vs cause confusion (e.g., breathing vs allergic reaction)
-    - Similar categories (e.g., trauma vs falls vs assault)
-    - Overlapping keywords
-
-    --------------------------------------------------
-    OUTPUT FORMAT (STRICT)
-    --------------------------------------------------
-
-    Return your answer in the following format:
-
+    Output:
     [ID]
-
     Reasoning:
-    - Concisely explain why this is the correct classification
-    - Reference key parts of the transcript and/or keyword matches
-
-    Possible Confusions (for each):
-    - Nature code name
-    - Why it could apply:
-    - Why it is incorrect:
-
-    (Include 2-3 total confusion comparisons)
-
-    --------------------------------------------------
-    FINAL INSTRUCTION
-    --------------------------------------------------
-
-    Prioritize the initiating event over symptoms. Be decisive. Do not hedge between multiple final answers.
-""")
+    - Concise explanation supported by transcript details and/or keywords.
+    Possible Confusions:
+    - For each of 2-3 plausible alternatives: nature code name, why it could apply,
+      and why it is incorrect. Consider symptom/cause confusion, similar categories,
+      and overlapping keywords.
+""").strip()
