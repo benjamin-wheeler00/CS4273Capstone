@@ -2271,7 +2271,7 @@
         {
           "Parent_Question_ID": null,
           "Question_ID": "2",
-          "Question_Text": "Is she pregnullt?",
+          "Question_Text": "Is she pregnant?",
           "Allowed_Alternatives": null,
           "Condition": "F12-50",
           "Condition_Type": "age",
@@ -4341,7 +4341,7 @@
         {
           "Parent_Question_ID": null,
           "Question_ID": "1",
-          "Question_Text": "How many weeks pregnullt is she?",
+          "Question_Text": "How many weeks pregnant is she?",
           "Allowed_Alternatives": "months",
           "Condition": null,
           "Condition_Type": null,

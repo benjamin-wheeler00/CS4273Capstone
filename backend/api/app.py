@@ -4,6 +4,13 @@
 import os
 import sys
 
+# Windows may default to a legacy console encoding (for example cp1252),
+# which cannot print Unicode characters that may appear in prompts/responses.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Third-party
 from pathlib import Path
 from flask import Flask

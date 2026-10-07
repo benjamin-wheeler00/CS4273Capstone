@@ -93,6 +93,8 @@ def ai_grade_per_question(
             }
             continue
 
+        # TODO: Directly search for the question before prompting AI, if you find it exactly, then tell the ai that it was said
+
         user_message = get_single_question_prompt(question)
         print(f"==============================\n[USER]\n{user_message}\n")
         messages.append({"role": "user", "content": user_message})
