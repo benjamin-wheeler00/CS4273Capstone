@@ -5,7 +5,13 @@ FROM python:3.13.7
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     ffmpeg \
+    libffi8 \
     libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Refresh libffi because Python's ctypes module depends on the shared library.
+# Some python:3.13.7 image layers contain a zero-byte libffi file.
+RUN apt-get update && apt-get install --reinstall -y libffi8 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

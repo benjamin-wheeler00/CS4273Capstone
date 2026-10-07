@@ -80,6 +80,9 @@ What happens during build:
 - `Dockerfile.flask` installs Python backend dependencies, ffmpeg, and NLTK data.
 - `Dockerfile.ollama` starts Ollama temporarily and pulls `OLLAMA_MODEL`.
 - `Dockerfile.whisper` downloads WhisperX, alignment, pyannote, and sentence-transformer assets into a preload cache.
+- The backend installs CUDA-enabled PyTorch wheels and requests all NVIDIA GPUs through
+  Docker Compose. The host must have an NVIDIA driver and NVIDIA Container Toolkit
+  installed for `torch.cuda.is_available()` to return `True`.
 
 After building, start the app once online to seed the named Docker volumes:
 
