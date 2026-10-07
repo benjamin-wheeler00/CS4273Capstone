@@ -3,7 +3,7 @@ services:
     image: callanalysistool-frontend:latest
     build:
       context: ./frontend
-      dockerfile: Dockerfile.node
+      dockerfile: Dockerfile
       args:
         NODE_ENV: ${NODE_ENV}
         PORT: ${PORT_FRONTEND}
@@ -76,6 +76,12 @@ services:
         condition: service_completed_successfully
     ports:
       - "${PORT_BACKEND:-5001}:5001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     environment:
       - FLASK_ENV=${FLASK_ENV}
       - OLLAMA_HOST=${OLLAMA_HOST_BACKEND}
