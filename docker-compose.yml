@@ -1,3 +1,5 @@
+# This is a standalone file for production
+# Update the image names for the appropriate repository
 services:
   frontend:
     image: ghcr.io/benjamin-wheeler00/cs4273capstone/frontend:main
