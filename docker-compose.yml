@@ -2,7 +2,7 @@ services:
   frontend:
     image: ghcr.io/benjamin-wheeler00/cs4273capstone/frontend:main
     ports:
-      - "3000"
+      - "3000:3000"
   backend:
     image: ghcr.io/benjamin-wheeler00/cs4273capstone/backend:main
     gpus: all
