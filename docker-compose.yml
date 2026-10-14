@@ -11,9 +11,3 @@ services:
   ollama:
     image: ghcr.io/benjamin-wheeler00/cs4273capstone/ollama:main
     gpus: all
-    #ports:
-    #  - "11434"
-    #environment:
-    #  OLLAMA_IGPU_ENABLE: 1
-    #devices:
-    #  - "/dev/dri"
