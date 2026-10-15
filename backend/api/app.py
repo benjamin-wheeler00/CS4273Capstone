@@ -23,6 +23,7 @@ sys.path.insert(0, str(backend_dir))
 # Local modules
 from api.routes.dispatchers import dispatchers_bp
 from api.routes.files import files_bp
+from api.routes.grading_criteria import grading_criteria_bp
 from api.routes.regrade import regrade_bp
 from api.routes.upload import upload_bp
 from api.services.whisperx_transcriber import initialize_transcriber
@@ -53,6 +54,7 @@ def create_app():
     app.register_blueprint(dispatchers_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api')
     app.register_blueprint(files_bp, url_prefix='/api')
+    app.register_blueprint(grading_criteria_bp, url_prefix='/api')
     app.register_blueprint(regrade_bp, url_prefix='/api')
 
     # In containerized environment, defer model initialization to avoid startup issues
