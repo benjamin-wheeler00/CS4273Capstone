@@ -4,6 +4,8 @@ import os
 import sys
 from pathlib import Path
 
+from whisperx.diarize import DiarizationPipeline
+
 # Add the backend directory to Python path so imports work
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -18,4 +20,18 @@ if not token:
 
 os.environ["HF_TOKEN"] = token.strip()
 
-WhisperXTranscriber().load_model()
+# Download our THREE models
+transcriber = WhisperXTranscriber()
+
+# Transcriber
+transcriber.load_model()
+
+# Alignment
+# This is allowed to be None?
+if transcriber.whisperx is not None:
+    transcriber.whisperx.load_align_model()
+else:
+    raise ImportError("WhisperX not installed.")
+
+# Diarization
+DiarizationPipeline(token=token)
