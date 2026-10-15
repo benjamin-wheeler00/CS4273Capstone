@@ -29,7 +29,7 @@ transcriber.load_model()
 # Alignment
 # This is allowed to be None?
 if transcriber.whisperx is not None:
-    transcriber.whisperx.load_align_model()
+    transcriber.whisperx.load_align_model(transcriber.config.language, transcriber.device)
 else:
     raise ImportError("WhisperX not installed.")
 
