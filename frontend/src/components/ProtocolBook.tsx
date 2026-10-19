@@ -636,6 +636,7 @@ const ProtocolBook = () => {
               {selectedProtocol.description}
             </p>
 
+            {/* Load editable criteria from the master file; changing protocols resets editor state. */}
             <GradingCriteria key={selectedProtocol.id} natureCodeId={selectedProtocol.id} />
           </div>
         </div>

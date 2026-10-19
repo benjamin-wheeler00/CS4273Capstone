@@ -54,6 +54,7 @@ def create_app():
     app.register_blueprint(dispatchers_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api')
     app.register_blueprint(files_bp, url_prefix='/api')
+    # Expose master-criterion editing separately from saved record and grade endpoints.
     app.register_blueprint(grading_criteria_bp, url_prefix='/api')
     app.register_blueprint(regrade_bp, url_prefix='/api')
 

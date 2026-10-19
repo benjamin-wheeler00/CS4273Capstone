@@ -14,11 +14,13 @@ from api.routes import grading_criteria as routes
 
 class GradingCriteriaTests(unittest.TestCase):
     def setUp(self):
+        # Copy the real schema into a disposable file; tests never edit production data.
         self.directory = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.directory.cleanup)
         self.path = Path(self.directory.name) / "nature_codes_master.json"
         self.original = json.loads(routes.MASTER_PATH.read_text(encoding="utf-8"))
         self.path.write_text(json.dumps(self.original), encoding="utf-8")
+        # Redirect file operations, then test only this blueprint without loading AI models.
         patcher = patch.object(routes, "MASTER_PATH", self.path)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -27,6 +29,7 @@ class GradingCriteriaTests(unittest.TestCase):
         self.client = app.test_client()
 
     def test_reads_exact_protocol_questions(self):
+        # Each protocol should return its own questions in their original order.
         for code in ("0", "1"):
             response = self.client.get(f"/api/grading-criteria/{code}")
             self.assertEqual(response.status_code, 200)
@@ -36,6 +39,7 @@ class GradingCriteriaTests(unittest.TestCase):
             ])
 
     def test_edit_persists_only_target_text_and_survives_reload(self):
+        # Compare the entire document to catch accidental changes to unrelated metadata.
         expected = copy.deepcopy(self.original)
         # Include Case Entry's subquestions and an independent nature code.
         for code, index, text in (("0", 1, "Confirm location — café?"), ("1", 0, "Check alertness?")):
@@ -46,11 +50,13 @@ class GradingCriteriaTests(unittest.TestCase):
             )
             self.assertEqual(response.status_code, 200)
             question["Question_Text"] = text
+            # A separate GET verifies the saved value is read back from disk.
             loaded = self.client.get(f"/api/grading-criteria/{code}").json
             self.assertEqual(loaded[index]["text"], text)
         self.assertEqual(json.loads(self.path.read_text(encoding="utf-8")), expected)
 
     def test_invalid_edits_do_not_write(self):
+        # Invalid input and unknown IDs should leave even the file's formatting untouched.
         before = self.path.read_bytes()
         for payload in ({}, {"text": " \n "}, {"text": None}, {"text": 12}, [], "text"):
             response = self.client.put("/api/grading-criteria/0/1", json=payload)
@@ -61,6 +67,7 @@ class GradingCriteriaTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_failed_replace_preserves_file_and_cleans_temp_file(self):
+        # Simulate a filesystem failure after writing the temporary replacement.
         before = self.path.read_bytes()
         with patch.object(routes.os, "replace", side_effect=OSError("Write failed")):
             response = self.client.put("/api/grading-criteria/0/1", json={"text": "Changed"})
