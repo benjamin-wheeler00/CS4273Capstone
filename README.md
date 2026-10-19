@@ -110,7 +110,7 @@ Important runtime folders and files:
 - Next.js 15, React 19, TypeScript, and Tailwind CSS for the frontend.
 - WhisperX for speech-to-text transcription and timestamp alignment.
 - pyannote/WhisperX diarization for speaker separation.
-- Ollama with `llama3.1:8b` for local nature-code detection and per-question grading.
+- Ollama with `deepseek-r1:8b` for local nature-code detection and per-question grading.
 - Docker Compose for containerized and offline deployment.
 
 ### Backend Setup
@@ -122,7 +122,7 @@ Prerequisites:
 - Python available as `python3` or `python`.
 - ffmpeg available on `PATH`.
 - Ollama installed and available on `PATH`.
-- The `llama3.1:8b` model pulled in Ollama.
+- The `deepseek-r1:8b` model pulled in Ollama.
 - `HF_TOKEN` set when running local speaker diarization with pyannote model downloads.
 
 Basic setup:
@@ -135,7 +135,7 @@ sh install_api_requirements.sh
 The install script:
 
 - Checks for ffmpeg.
-- Pulls `llama3.1:8b` if Ollama is available.
+- Pulls `deepseek-r1:8b` if Ollama is available.
 - Creates `venv/` if needed.
 - Installs `requirements.txt`.
 - Exports backend environment values inside the script. `start_api.sh` exports them again before launching Flask.
@@ -149,7 +149,7 @@ python3 -m venv venv
 python -m pip install -r requirements.txt
 export PYTHONPATH=.
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
-ollama pull llama3.1:8b
+ollama pull deepseek-r1:8b
 ```
 
 On Windows shells that expose the Windows venv layout, use:
@@ -510,7 +510,7 @@ NEXT_PUBLIC_API_PORT=5001
 NEXT_PUBLIC_API_URL=
 
 OLLAMA_HOST_OLLAMA=0.0.0.0
-OLLAMA_MODEL=llama3.1:8b
+OLLAMA_MODEL=deepseek-r1:8b
 PORT_OLLAMA=11434
 
 HF_HOME_PRELOAD=/preload_cache
@@ -596,7 +596,7 @@ Check:
 ollama --version
 ollama serve
 ollama list
-ollama pull llama3.1:8b
+ollama pull deepseek-r1:8b
 curl http://localhost:11434/api/tags
 ```
 
