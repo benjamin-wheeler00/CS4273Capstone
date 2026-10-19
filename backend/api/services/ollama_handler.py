@@ -2,18 +2,34 @@
 
 # Standard library
 import os
+import re
 import time
 
 # Third-party
 import ollama
 
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 # See https://github.com/ollama/ollama/blob/main/docs/modelfile.mdx#valid-parameters-and-values
 OLLAMA_DEFAULT_OPTIONS = {
     "seed": 42,
+    "num_ctx": int(os.getenv("OLLAMA_NUM_CTX", "16384")),
+    "temperature": 0.6,  # recommended for DeepSeek-R1
 }
+
+_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def strip_reasoning(text):
+    """Remove DeepSeek-R1 <think>...</think> reasoning from a response."""
+    if not text:
+        return text
+    text = _THINK_BLOCK.sub("", text)
+    if "</think>" in text:  # opening tag missing
+        text = text.split("</think>")[-1]
+    text = re.sub(r"<think>.*\Z", "", text, flags=re.DOTALL)  # cut off mid-thought
+    return text.strip()
 
 _ollama_initialized = False
 
@@ -89,7 +105,7 @@ def prompt_ollama(prompt, model = OLLAMA_MODEL, options = OLLAMA_DEFAULT_OPTIONS
             options=options,
         )
         if response:
-            return response["response"]
+            return strip_reasoning(response["response"])
         else:
             print("No response detected")
             return None
@@ -114,7 +130,7 @@ def chat_ollama(messages, model=OLLAMA_MODEL, options=OLLAMA_DEFAULT_OPTIONS):
             options=options,
         )
         if response and "message" in response and "content" in response["message"]:
-            return response["message"]["content"]
+            return strip_reasoning(response["message"]["content"])
         print("No chat response detected")
         return None
     except Exception as exc:
