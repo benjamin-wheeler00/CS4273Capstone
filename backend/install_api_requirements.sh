@@ -14,7 +14,7 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
 fi
 
 if command -v ollama >/dev/null 2>&1; then
-    ollama pull llama3.1:8b
+    ollama pull "${OLLAMA_MODEL:-deepseek-r1:8b}"
 else
     echo "ollama was not found on PATH."
     echo "Install Ollama before running AI grading."
