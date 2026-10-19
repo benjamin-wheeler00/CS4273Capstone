@@ -12,11 +12,10 @@ from typing import Any, Dict, Tuple
 
 # Local modules
 from api.services.prompts import get_grading_system_prompt, get_single_question_prompt
-from api.services.ollama_handler import chat_ollama
+from api.services.ollama_handler import chat_ollama, OLLAMA_MODEL
 from api.services.nature_codes import load_nature_code_questions, get_nature_codes_master
 from api.services.text_handler import json_to_text
 
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 PER_QUESTION_MAX_RETRIES = 3
 FALLBACK_REASONING = "No valid bracketed grade was returned after the maximum retry attempts."
 
