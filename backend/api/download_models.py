@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 
+import nltk
 from whisperx.diarize import DiarizationPipeline
 
 # Add the backend directory to Python path so imports work
@@ -20,7 +21,7 @@ if not token:
 
 os.environ["HF_TOKEN"] = token.strip()
 
-# Download our THREE models
+# Download our FOUR models
 transcriber = WhisperXTranscriber()
 
 # Transcriber
@@ -35,3 +36,6 @@ else:
 
 # Diarization
 DiarizationPipeline(token=token)
+
+# Tokonizer?
+nltk.download("punkt_tab")
