@@ -478,7 +478,7 @@ Re-runs AI grading for an existing record using its current transcript and store
 {YYYYMMDD}_{HHMMSS}_{nature_code}
 ```
 
-There is no dedicated `/api/health` route at the moment. For a simple backend smoke check, use `GET /api/dispatchers`.
+Use `GET /api/health` for a lightweight backend smoke check. It returns HTTP 200 with `{"status":"ok"}` without loading models or reading application data.
 
 ---
 
@@ -656,7 +656,7 @@ export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
 - AI grading quality depends on transcript quality, speaker labels, nature-code selection, and local model responses.
 - The frontend protocol reference is static UI data and may not perfectly mirror `nature_codes_master.json`.
 - The manual backend test script still targets older endpoints.
-- There is no dedicated backend health endpoint.
+- The backend health endpoint is `GET /api/health`.
 
 ---
 

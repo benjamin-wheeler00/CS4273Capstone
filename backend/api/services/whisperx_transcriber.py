@@ -62,7 +62,7 @@ class WhisperXTranscriber:
             )
 
         print(f"Loading WhisperX-{self.config.model_size}")
-        print("Cuda available: ", torch.cuda.is_available())
+        print(f"CUDA available: {torch.cuda.is_available()} (device: {self.device})")
         compute_type = "float16" if self.device == "cuda" else "int8"
 
         self.model = whisperx.load_model(
