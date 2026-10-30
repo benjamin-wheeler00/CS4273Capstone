@@ -16,6 +16,7 @@ sys.path.insert(0, str(backend_dir))
 # Local modules
 from api.routes.dispatchers import dispatchers_bp
 from api.routes.files import files_bp
+from api.routes.health import health_bp
 from api.routes.regrade import regrade_bp
 from api.routes.upload import upload_bp
 from api.services.whisperx_transcriber import initialize_transcriber
@@ -46,6 +47,7 @@ def create_app():
     app.register_blueprint(dispatchers_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api')
     app.register_blueprint(files_bp, url_prefix='/api')
+    app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(regrade_bp, url_prefix='/api')
 
     # In containerized environment, defer model initialization to avoid startup issues
@@ -85,6 +87,7 @@ if __name__ == '__main__':
         print("=" * 60)
         print(f"Running on: http://localhost:{port}")
         print(f"Dispatchers endpoint: http://localhost:{port}/api/dispatchers")
+        print(f"Health endpoint: http://localhost:{port}/api/health")
         print(f"Upload endpoint: http://localhost:{port}/api/upload")
         print(f"Files endpoint: http://localhost:{port}/api/files/<filename>")
         print("=" * 60)

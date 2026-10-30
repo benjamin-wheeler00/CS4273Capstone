@@ -1,0 +1,83 @@
+{
+  "date": "20260923",
+  "time": "095500",
+  "agent_name": "Miller",
+  "speakers": [
+    "dispatcher",
+    "caller"
+  ],
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.2,
+      "speaker": "dispatcher",
+      "text": "911, what is your emergency?"
+    },
+    {
+      "start": 4.2,
+      "end": 10.5,
+      "speaker": "caller",
+      "text": "My husband is having trouble breathing and chest pain. He is awake but he cannot catch his breath."
+    },
+    {
+      "start": 10.5,
+      "end": 15.6,
+      "speaker": "dispatcher",
+      "text": "Is he conscious and breathing right now?"
+    },
+    {
+      "start": 15.6,
+      "end": 22.3,
+      "speaker": "caller",
+      "text": "Yes, he is awake and breathing, but he says his chest hurts and he feels tight."
+    },
+    {
+      "start": 22.3,
+      "end": 28.8,
+      "speaker": "dispatcher",
+      "text": "Does he have any history of heart problems or is he on any medications?"
+    },
+    {
+      "start": 28.8,
+      "end": 35.1,
+      "speaker": "caller",
+      "text": "He has a history of high blood pressure. He takes blood pressure medicine but not much else."
+    },
+    {
+      "start": 35.1,
+      "end": 41.4,
+      "speaker": "dispatcher",
+      "text": "Is he having any nausea, sweating, or pain radiating to his arm or jaw?"
+    },
+    {
+      "start": 41.4,
+      "end": 47.8,
+      "speaker": "caller",
+      "text": "He is sweaty and says the pain is going down his left arm."
+    },
+    {
+      "start": 47.8,
+      "end": 53.6,
+      "speaker": "dispatcher",
+      "text": "Is he allergic to anything or does he have any difficulty speaking?"
+    },
+    {
+      "start": 53.6,
+      "end": 59.4,
+      "speaker": "caller",
+      "text": "No allergies. He can speak, but he is very short of breath."
+    },
+    {
+      "start": 59.4,
+      "end": 66.5,
+      "speaker": "dispatcher",
+      "text": "Okay, I am sending advanced life support and an ambulance to your location now."
+    },
+    {
+      "start": 66.5,
+      "end": 72.9,
+      "speaker": "caller",
+      "text": "Thank you. We are at 123 Oak Street, apartment 2B."
+    }
+  ]
+}
