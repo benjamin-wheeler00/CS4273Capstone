@@ -38,5 +38,6 @@ fi
 
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
 export PYTHONPATH=.
+export PYTHONUTF8=1
 
 python api/app.py

@@ -75,18 +75,29 @@ def calculate_final_grade(grades: Dict[str, str], questions_dict: Dict[str, Dict
 def ai_grade_per_question(
     transcript_text: str,
     questions_dict: Dict[str, Dict[str, Any]],
+    dispatcher_name: str = "dispatcher",
 ) -> Dict[str, Dict[str, str]]:
-    """Grade a transcript one question at a time using a persistent chat."""
+    """Grade each question with shared evidence and an independent chat."""
     system_prompt = get_grading_system_prompt(transcript_text, questions_dict)
+    # Use the actual dispatcher label and keep turns separate from caller speech.
+    dispatcher_turns = []
+    for line in transcript_text.splitlines():
+        turn = re.fullmatch(r"\[([^\]]+)\]\s+([^:]+):\s*(.*)", line)
+        if (
+            turn
+            and turn.group(2).strip().casefold() == dispatcher_name.strip().casefold()
+            and turn.group(2).strip().casefold() != "caller"
+        ):
+            dispatcher_turns.append((line, turn.group(3)))
 
     print(f"[SYSTEM]\n{system_prompt}\n")
 
-    messages = [{"role": "system", "content": system_prompt}]
     grade_details: Dict[str, Dict[str, str]] = {}
 
     for question_id, question in questions_dict.items():
         # Set skipped questions to N/A (5)
         if question.get("Skip_AI_Grading", False):
+            print(f"[DIRECT SEARCH] {question_id}: Skipped (AI grading disabled).")
             grade_details[question_id] = {
                 "code": "5",
                 "reasoning": "This question was set to be skipped for AI grading.",
@@ -94,8 +105,39 @@ def ai_grade_per_question(
             continue
 
         user_message = get_single_question_prompt(question)
+        question_text = (question.get("Question_Text") or "").strip()
+        exact_match = next(
+            (line for line, dialogue in dispatcher_turns if question_text and question_text in dialogue),
+            None,
+        )
+        if exact_match:
+            print(
+                f"[DIRECT SEARCH] {question_id}: Directly said "
+                "(exact text found in dispatcher dialogue)."
+            )
+            print(f"[DIRECT SEARCH] Evidence: {exact_match}")
+            user_message += (
+                "\n\nDirect text search found the exact listed question in the dispatcher's dialogue."
+                f"\nSupporting transcript quote: {exact_match}"
+                "\nUse this as positive evidence that the question was stated; still evaluate "
+                "order, conditions, and all other grading rules. This search is only an aid: "
+                "absence of an exact match is not evidence of omission or incorrect wording "
+                "and must not count against any question. Accept equivalent wording and "
+                "allowed alternatives under the existing rules."
+            )
+        else:
+            print(
+                f"[DIRECT SEARCH] {question_id}: Exact text not found in dispatcher dialogue. "
+                "The question may still have been asked using different wording; "
+                "AI grading proceeds unchanged."
+            )
         print(f"==============================\n[USER]\n{user_message}\n")
-        messages.append({"role": "user", "content": user_message})
+        # Keep the full transcript and sequence for evidence, conditions, and order.
+        # Previous questions' prompts, grades, and retries are not needed here.
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ]
 
         grade_code = None
         reasoning = ""
@@ -107,8 +149,6 @@ def ai_grade_per_question(
             grade_code, reasoning = _extract_grade_and_reasoning(response)
 
             if grade_code:
-                assistant_reply = response.strip()
-                messages.append({"role": "assistant", "content": assistant_reply})
                 grade_details[question_id] = {
                     "code": grade_code,
                     "reasoning": reasoning,
@@ -124,18 +164,15 @@ def ai_grade_per_question(
                     {
                         "role": "user",
                         "content": (
-                            "Your last reply was invalid because it did not include a grade in square brackets "
-                            "at the beginning. Reply again using this exact structure: [X] reasoning text with "
-                            "direct quote(s). Also remember that transcript labels may be incorrect, including "
-                            "cases where the dispatcher appears to talk to themself or does not wait for a proper response."
+                            "Reply again for this question only. Begin with one grade [1]-[6], "
+                            "then concise reasoning and exact supporting quotes with speaker "
+                            "and timestamp. Follow the system grading rules."
                         ),
                     }
                 )
             print("=== RETRYING ===")
 
         if not grade_code:
-            fallback_reply = "[5] " + FALLBACK_REASONING
-            messages.append({"role": "assistant", "content": fallback_reply})
             grade_details[question_id] = {
                 "code": "5",
                 "reasoning": FALLBACK_REASONING,
@@ -197,7 +234,10 @@ def grade_transcript_file(
     questions_dict = _questions_list_to_dict(questions_list)
 
     print("Running AI grading...", flush=True)
-    ai_grades = ai_grade_per_question(transcript_text, questions_dict)
+    ai_grades = ai_grade_per_question(
+        transcript_text, questions_dict,
+        dispatcher_name=transcript_data.get("agent_name") or "dispatcher",
+    )
 
     if not ai_grades:
         raise RuntimeError("AI grading returned empty results")
