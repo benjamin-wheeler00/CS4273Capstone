@@ -4,6 +4,13 @@
 import os
 import sys
 
+# Windows may default to a legacy console encoding (for example cp1252),
+# which cannot print Unicode characters that may appear in prompts/responses.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Third-party
 from pathlib import Path
 from flask import Flask
@@ -17,6 +24,7 @@ sys.path.insert(0, str(backend_dir))
 from api.routes.dispatchers import dispatchers_bp
 from api.routes.files import files_bp
 from api.routes.health import health_bp
+from api.routes.grading_criteria import grading_criteria_bp
 from api.routes.regrade import regrade_bp
 from api.routes.upload import upload_bp
 from api.services.whisperx_transcriber import initialize_transcriber
@@ -48,6 +56,8 @@ def create_app():
     app.register_blueprint(upload_bp, url_prefix='/api')
     app.register_blueprint(files_bp, url_prefix='/api')
     app.register_blueprint(health_bp, url_prefix='/api')
+    # Expose master-criterion editing separately from saved record and grade endpoints.
+    app.register_blueprint(grading_criteria_bp, url_prefix='/api')
     app.register_blueprint(regrade_bp, url_prefix='/api')
 
     # In containerized environment, defer model initialization to avoid startup issues

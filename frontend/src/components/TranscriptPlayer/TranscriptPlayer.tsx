@@ -10,6 +10,7 @@ interface TranscriptSegment {
 }
 
 interface TranscriptData {
+  agent_name?: string;
   segments?: TranscriptSegment[];
 }
 
@@ -30,6 +31,8 @@ function TranscriptPlayer({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editSpeaker, setEditSpeaker] = useState("");
   const [editText, setEditText] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [dispatcherOnly, setDispatcherOnly] = useState(false);
 
   const segments = (transcriptData as TranscriptData)?.segments ?? [];
   const messages = segments.map(
@@ -41,6 +44,25 @@ function TranscriptPlayer({
       end: segment.end,
     })
   );
+
+  const query = searchText.trim().toLocaleLowerCase();
+  const dispatcherLabels = [
+    "dispatcher",
+    dispatcherName,
+    (transcriptData as TranscriptData)?.agent_name,
+  ].filter((label): label is string => Boolean(label))
+    .map((label) => label.trim().toLocaleLowerCase());
+  const visibleMessages = messages.filter((message) => {
+    const speaker = message.speaker.trim().toLocaleLowerCase();
+    return (
+      (!dispatcherOnly || (speaker !== "caller" && dispatcherLabels.includes(speaker))) &&
+      message.text.toLocaleLowerCase().includes(query)
+    );
+  });
+
+  useEffect(() => {
+    if (chatBoxRef.current) chatBoxRef.current.scrollTop = 0;
+  }, [searchText, dispatcherOnly]);
 
   const displaySpeaker = (speaker: string) => {
     if (speaker === "dispatcher" && dispatcherName) return dispatcherName;
@@ -98,8 +120,29 @@ function TranscriptPlayer({
 
   return (
     <div className={styles.chatBox}>
+      <div className={styles.searchToolbar}>
+        <input
+          type="search"
+          aria-label="Search transcript text"
+          placeholder="Search transcript..."
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+          className={styles.searchInput}
+        />
+        <label className={styles.dispatcherFilter}>
+          <input
+            type="checkbox"
+            checked={dispatcherOnly}
+            onChange={(event) => setDispatcherOnly(event.target.checked)}
+          />
+          Dispatcher only
+        </label>
+      </div>
       <div ref={chatBoxRef} className={styles.chatInner}>
-        {messages.map((message) => (
+        {visibleMessages.length === 0 && (
+          <p className={styles.emptyResults} role="status">No matching messages.</p>
+        )}
+        {visibleMessages.map((message) => (
           <div
             key={message.id}
             className={`

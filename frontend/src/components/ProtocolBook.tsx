@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import GradingCriteria from "./GradingCriteria";
 
 const PRIMARY_NAVY = "#002d62";
 const ROUNDING_CLASS = "rounded-[10px]";
@@ -635,22 +636,8 @@ const ProtocolBook = () => {
               {selectedProtocol.description}
             </p>
 
-            <div className="space-y-2">
-              {selectedProtocol.steps.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start bg-gray-50 p-3 shadow-inner rounded-md border border-gray-200"
-                >
-                  <span
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-white font-extrabold rounded-full mr-3 text-sm"
-                    style={{ backgroundColor: PRIMARY_NAVY }}
-                  >
-                    {idx + 1}
-                  </span>
-                  <p className="text-gray-800 font-medium leading-relaxed flex-grow">{step}</p>
-                </div>
-              ))}
-            </div>
+            {/* Load editable criteria from the master file; changing protocols resets editor state. */}
+            <GradingCriteria key={selectedProtocol.id} natureCodeId={selectedProtocol.id} />
           </div>
         </div>
       )}
