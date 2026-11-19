@@ -52,6 +52,12 @@ def get_single_question_prompt(question: Dict[str, Any]) -> str:
     for label, key in fields:
         value = question.get(key)
         lines.append(f"{label}: {'None' if value is None else value}")
+    lines.append(
+        "After [code], start the reasoning with the exact transcript timestamp range "
+        "for the located question or allowed alternative, then explain the grade. "
+        "For [6], use the caller's explicit answer timestamp. If no matching question "
+        "or supporting evidence is found, state that clearly; never invent a timestamp."
+    )
     return "\n".join(lines)
 
 
@@ -109,8 +115,25 @@ GRADING_BASE_PROMPT = textwrap.dedent("""
     strongly suggests mislabeling (e.g., dispatcher answering their own question).
     Do not penalize labeling errors or invent dialogue; retain original labels in quotes.
 
-    Output: [code] followed by concise, specific reasoning and direct supporting quotes.
-    Each quote must include the original speaker label, timestamp, and exact wording.
+    Timestamp evidence is mandatory whenever the question can be located in the transcript,
+    including equivalent wording and Allowed Alternatives. Copy the exact timestamp range
+    from the matching transcript turn and put it at the very START of the reasoning,
+    immediately after [code], before any explanation, speaker label, or quote. Use the
+    question's timestamp, not an unrelated nearby turn. If multiple turns are needed,
+    begin with the first matching turn's timestamp and cite the others in the explanation.
+    For [6], begin with the timestamp of the caller's explicit answer instead.
+
+    Output format when evidence is located:
+    [code] [MM:SS.s-MM:SS.s] concise, specific reasoning and direct supporting quotes.
+    The timestamp range must be copied from the supplied transcript, preserving its
+    precision. Each quote must include the original speaker label, timestamp, and exact wording.
+    Do not write a heading such as 'Reasoning:' before the opening timestamp.
+    For an omitted question with no matching turn or other relevant evidence, begin with
+    'No matching question found.' and explain the omission; do not invent its timestamp.
+    If other transcript evidence supports [5] or another grade, begin with that evidence's
+    exact timestamp and explain its relevance without claiming the question was asked.
+    If relevant text exists but has no timestamp, explicitly state 'Timestamp unavailable.'
+    Never guess, fabricate, or borrow an unrelated timestamp to satisfy this format.
     No paraphrased quotes, JSON, bullets, sections, extra formatting, or other grades.
 """).strip()
 

@@ -124,6 +124,8 @@ def ai_grade_per_question(
                 "absence of an exact match is not evidence of omission or incorrect wording "
                 "and must not count against any question. Accept equivalent wording and "
                 "allowed alternatives under the existing rules."
+                " Start the reasoning immediately after [code] with the exact timestamp "
+                "range of the matching question turn shown above, before any explanation."
             )
         else:
             print(
@@ -165,8 +167,13 @@ def ai_grade_per_question(
                         "role": "user",
                         "content": (
                             "Reply again for this question only. Begin with one grade [1]-[6], "
-                            "then concise reasoning and exact supporting quotes with speaker "
-                            "and timestamp. Follow the system grading rules."
+                            "then start the reasoning with the exact transcript timestamp "
+                            "range of the located question or allowed alternative (for [6], "
+                            "the caller's explicit answer). Place it before all explanation. "
+                            "Include concise reasoning and exact supporting quotes with "
+                            "original speaker labels and timestamps. If no question or "
+                            "supporting evidence can be located, explicitly say so; never "
+                            "invent a timestamp. Follow the system grading rules."
                         ),
                     }
                 )
