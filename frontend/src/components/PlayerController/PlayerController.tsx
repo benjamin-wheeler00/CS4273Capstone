@@ -24,11 +24,13 @@ interface PlayerControllerProps {
   audioFile?: string;
   editable?: boolean;
   dispatcherName?: string;
+  onTranscriptChange?: () => void;
 }
 
 export interface PlayerControllerHandle {
   saveTranscriptChanges: () => Promise<boolean>;
   getTranscriptData: () => TranscriptData | null;
+  seekTo: (seconds: number) => void;
 }
 
 const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProps>(function PlayerController({
@@ -36,6 +38,7 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
   audioFile,
   editable = false,
   dispatcherName,
+  onTranscriptChange,
 }: PlayerControllerProps, ref) {
   // states
   const [fileName, setFileName] = useState("N/A");
@@ -47,6 +50,7 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
     null
   );
   const [currentTime, setCurrentTime] = useState(0);
+  const [seekRequest, setSeekRequest] = useState<{ seconds: number } | null>(null);
   const [transcriptionLoaded, setTranscriptionLoaded] = useState(false);
 
   // Load exact backend record files when provided
@@ -55,6 +59,7 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
       return;
     }
 
+    setSeekRequest(null);
     setTranscriptionLoaded(false);
     setTranscription(null);
     setCurrentTime(0);
@@ -87,6 +92,9 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
   }, [fileName, transcriptionLoaded]);
 
   const handleEditSegment = (index: number, speaker: string, text: string) => {
+    const segment = editableTranscription?.segments?.[index];
+    if (!segment || ((segment.speaker || "unknown") === speaker && (segment.text || "").trim() === text.trim())) return;
+    onTranscriptChange?.();
     setEditableTranscription((current) => {
       if (!current?.segments) {
         return current;
@@ -122,6 +130,11 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
   useImperativeHandle(ref, () => ({
     saveTranscriptChanges,
     getTranscriptData: () => editableTranscription || transcription,
+    seekTo: (seconds) => {
+      if (!Number.isFinite(seconds) || seconds < 0) return;
+      setCurrentTime(seconds);
+      setSeekRequest({ seconds });
+    },
   }), [editableTranscription, saveTranscriptChanges, transcription]);
 
   return (
@@ -131,10 +144,11 @@ const PlayerController = forwardRef<PlayerControllerHandle, PlayerControllerProp
           editable ? editableTranscription || transcription || undefined : transcription || undefined
         }
         currentTime={currentTime}
+        seekRequest={seekRequest}
         onEditSegment={editable ? handleEditSegment : undefined}
         dispatcherName={resolvedDispatcherName}
       />
-      <AudioPlayer path={fileURL || undefined} onProgress={setCurrentTime} />
+      {fileURL && <AudioPlayer path={fileURL} onProgress={setCurrentTime} seekRequest={seekRequest} />}
     </>
   );
 });

@@ -35,7 +35,7 @@ export default function RootLayout({
       >
         <div className="flex">
           <Navbar />
-          <div className="flex-1">{children}</div>
+          <div className="min-w-0 flex-1">{children}</div>
         </div>
       </body>
     </html>

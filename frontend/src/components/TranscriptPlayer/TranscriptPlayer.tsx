@@ -17,6 +17,7 @@ interface TranscriptData {
 interface TranscriptPlayerProps {
   transcriptData?: TranscriptData | string | null;
   currentTime: number;
+  seekRequest?: { seconds: number } | null;
   onEditSegment?: (index: number, speaker: string, text: string) => void;
   dispatcherName?: string;
 }
@@ -24,6 +25,7 @@ interface TranscriptPlayerProps {
 function TranscriptPlayer({
   transcriptData,
   currentTime,
+  seekRequest,
   onEditSegment,
   dispatcherName,
 }: TranscriptPlayerProps) {
@@ -114,6 +116,22 @@ function TranscriptPlayer({
     setEditText("");
   }, [transcriptData]);
 
+  // Explicit timestamp jumps reveal the target even when transcript filters hide it.
+  useEffect(() => {
+    if (!seekRequest) return;
+    setSearchText("");
+    setDispatcherOnly(false);
+  }, [seekRequest]);
+
+  useEffect(() => {
+    if (!seekRequest || searchText || dispatcherOnly) return;
+    const box = chatBoxRef.current;
+    const target = box?.querySelector<HTMLElement>(`[data-segment-id="${activeIndex}"]`);
+    if (box && target) {
+      box.scrollTop += target.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientHeight / 3;
+    }
+  }, [seekRequest, searchText, dispatcherOnly, activeIndex]);
+
   if (segments.length === 0) {
     return <div className={styles.chatBox}>Choose a call to review</div>;
   }
@@ -145,6 +163,7 @@ function TranscriptPlayer({
         {visibleMessages.map((message) => (
           <div
             key={message.id}
+            data-segment-id={message.id}
             className={`
                             ${styles.messageRow} 
                             ${

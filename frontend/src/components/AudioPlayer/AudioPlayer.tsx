@@ -9,10 +9,11 @@ import { useState, useRef, useEffect } from 'react'
 // props
 type AudioPlayerProps = {
     path?: string,
-    onProgress?: (time: number) => void
+    onProgress?: (time: number) => void,
+    seekRequest?: { seconds: number } | null
 }
 
-function AudioPlayer({ path, onProgress }: AudioPlayerProps) {
+function AudioPlayer({ path, onProgress, seekRequest }: AudioPlayerProps) {
 
     // states
     const [isPlaying, setIsPlaying] = useState(false)
@@ -68,6 +69,24 @@ function AudioPlayer({ path, onProgress }: AudioPlayerProps) {
         }
     }, [path])
 
+
+    useEffect(() => {
+        const audio = audioPlayer.current;
+        if (!audio || !seekRequest) return;
+        const seek = () => {
+            const seconds = Math.min(seekRequest.seconds, Number.isFinite(audio.duration) ? audio.duration : seekRequest.seconds);
+            audio.currentTime = seconds;
+            setCurrentTime(seconds);
+            if (progressBar.current) {
+                progressBar.current.value = String(seconds);
+                progressBar.current.style.setProperty("--seek-before-width", `${audio.duration > 0 ? seconds / audio.duration * 100 : 0}%`);
+            }
+            onProgress?.(seconds);
+        };
+        if (audio.readyState >= 1) seek();
+        else audio.addEventListener("loadedmetadata", seek, { once: true });
+        return () => audio.removeEventListener("loadedmetadata", seek);
+    }, [seekRequest, onProgress]);
 
     // calculates intended time format
     const formatTime = (secs: number) => {

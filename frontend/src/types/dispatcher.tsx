@@ -12,6 +12,8 @@ export interface FileGrade {
       label: string;
       status: string;
       reasoning?: string;
+      manually_overridden?: boolean;
+      overridden_at?: string;
     };
   };
   per_question?: {
@@ -20,6 +22,8 @@ export interface FileGrade {
       label: string;
       status: string;
       reasoning?: string;
+      manually_overridden?: boolean;
+      overridden_at?: string;
     };
   };
 }

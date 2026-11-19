@@ -1,8 +1,8 @@
 .chatBoxPreLoad {
   padding: 10px;
   width: 100%;
-  max-width: 750px;
-  height: 500px;
+  max-width: 100%;
+  height: min(600px, 70dvh);
   border-style: solid solid none solid;
   border-color: black;
   border-width: 1px 1px 0 1px;
@@ -15,8 +15,8 @@
   flex-direction: column;
   padding: 5px;
   width: 100%;
-  max-width: 750px;
-  height: 500px;
+  max-width: 100%;
+  height: min(600px, 70dvh);
   border-style: solid solid none solid;
   border-color: black;
   border-width: 1px 1px 0 1px;
@@ -192,4 +192,13 @@
 .emptyResults {
   text-align: center;
   color: #475569;
+}
+
+/* Fill the viewport-sized sticky review panel without pushing audio off screen. */
+@media (min-width: 1024px) {
+  .chatBox {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
 }

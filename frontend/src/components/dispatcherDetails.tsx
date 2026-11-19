@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ListFilter,
+  Pencil,
   Search,
 } from "lucide-react";
 import { Dispatcher, DispatcherRecord, FileParts } from "@/types/dispatcher";
@@ -51,6 +52,8 @@ interface EditableQuestionGrade {
   label: string;
   status: string;
   reasoning?: string;
+  manually_overridden?: boolean;
+  overridden_at?: string;
 }
 
 interface CallListItem {
@@ -381,6 +384,7 @@ const DispatcherDetails = ({
   /* -------- State -------- */
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isEditingGrades, setIsEditingGrades] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
   const [gradeData, setGradeData] = useState<EditableGradeData | null>(null);
   const [originalGradeData, setOriginalGradeData] = useState<EditableGradeData | null>(null);
   const [gradeSaveMessage, setGradeSaveMessage] = useState("");
@@ -391,6 +395,7 @@ const DispatcherDetails = ({
     Array<{ id: string; name: string }>
   >([]);
   const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+  const [transcriptNeedsRegrade, setTranscriptNeedsRegrade] = useState(false);
   const [transcriptSaveMessage, setTranscriptSaveMessage] = useState("");
   const [isTranscriptSaving, setIsTranscriptSaving] = useState(false);
   const [isCallListOpen, setIsCallListOpen] = useState(false);
@@ -402,6 +407,12 @@ const DispatcherDetails = ({
   const [regradeStartedAt, setRegradeStartedAt] = useState<number | null>(null);
   const [regradeElapsedNow, setRegradeElapsedNow] = useState<number>(Date.now());
   const playerControllerRef = useRef<PlayerControllerHandle | null>(null);
+
+  const renderJustification = (text: string) => text.split(/(\b(?:\d+:)?\d{1,3}:[0-5]\d(?:\.\d+)?\b|\b\d+(?:\.\d+)?\s*(?:seconds?|secs?|s)\b)/gi).map((part, index) => {
+    if (!/^(?:\d+:)?\d{1,3}:[0-5]\d(?:\.\d+)?$|^\d+(?:\.\d+)?\s*(?:seconds?|secs?|s)$/i.test(part)) return part;
+    const seconds = part.includes(":") ? part.split(":").reduce((total, value) => total * 60 + Number(value), 0) : parseFloat(part);
+    return <button key={index} type="button" onClick={() => playerControllerRef.current?.seekTo(seconds)} aria-label={`Jump to ${part} in transcript`} className="rounded px-0.5 font-medium text-blue-700 underline decoration-dotted underline-offset-2 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-500">{part}</button>;
+  });
 
   useEffect(() => {
     if (!isRegrading) return;
@@ -631,7 +642,11 @@ const DispatcherDetails = ({
     const gradeFilename =
       currentRecord?.gradeFile ||
       currentTranscript.replace(/_transcript\.json$/i, "_grades.json");
-    const nextQuestions = gradeData.grades || questionGrades;
+    const nextQuestions = Object.fromEntries(Object.entries(gradeData.grades || questionGrades).map(([key, question]) => {
+      const original = originalGradeData?.grades[key];
+      const changed = !original || question.code !== original.code || question.label !== original.label || (question.reasoning || "") !== (original.reasoning || "");
+      return [key, changed ? { ...question, manually_overridden: true, overridden_at: new Date().toISOString() } : question];
+    }));
     const replacementPayload = {
       ...currentGrade,
       ...gradeData,
@@ -652,6 +667,7 @@ const DispatcherDetails = ({
 
     if (options?.closeEditor ?? true) {
       setIsEditingGrades(false);
+      setEditingQuestion(null);
     }
 
     if (options?.refreshAfterSave ?? true) {
@@ -830,6 +846,7 @@ const DispatcherDetails = ({
         recordName;
       await refreshRecordState(refreshedRecordName);
 
+      setTranscriptNeedsRegrade(false);
       setRegradeProgress(100);
       setRegradeStep("Regrade complete.");
     } catch (error) {
@@ -849,6 +866,7 @@ const DispatcherDetails = ({
     setGradeData(cloneGradeData(originalGradeData));
     setGradeSaveMessage("");
     setIsEditingGrades(false);
+      setEditingQuestion(null);
   };
 
   useEffect(() => {
@@ -856,6 +874,7 @@ const DispatcherDetails = ({
       setGradeData(null);
       setOriginalGradeData(null);
       setIsEditingGrades(false);
+      setEditingQuestion(null);
       return;
     }
 
@@ -879,6 +898,7 @@ const DispatcherDetails = ({
   useEffect(() => {
     setGradeSaveMessage("");
     setTranscriptSaveMessage("");
+    setTranscriptNeedsRegrade(false);
   }, [currentTranscript]);
 
   useEffect(() => {
@@ -1304,14 +1324,10 @@ const handlePrintAll = async () => {
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Transcript */}
-        <Card className="flex h-full flex-col">
+      <Card className="mb-6 gap-3 py-4">
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div className="min-w-0">
-              <CardTitle>Question Grades</CardTitle>
+              <CardTitle>Call Grading</CardTitle>
               <details className="group mt-1">
                 <summary className="cursor-pointer list-none">
                   <div className="flex min-w-0 items-center gap-2">
@@ -1331,7 +1347,7 @@ const handlePrintAll = async () => {
                   {natureCodeReasoning || "No reasoning found."}
                 </CardDescription>
               </details>
-              <CardDescription>
+              <CardDescription className="break-all">
                 {currentRecord?.gradeFile ||
                   (currentTranscript
                     ? currentTranscript.replace(/_transcript\.json$/i, "_grades.json")
@@ -1339,18 +1355,10 @@ const handlePrintAll = async () => {
               </CardDescription>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={handleGradesEditButtonClick}
-                disabled={!currentGrade || isGradeSaving}
-                className={paginationButtonClassName}
-              >
-                {isGradeSaving
-                  ? "Saving..."
-                  : isEditingGrades
-                    ? "Save Edits"
-                    : "Edit Grades"}
-              </button>
+              {isEditingGrades && <div className="flex gap-2">
+                <button type="button" onClick={handleCancelGradesEdit} disabled={isGradeSaving || isRegrading || isNatureCodeTemplateLoading} className={paginationButtonClassName}>Cancel</button>
+                <button type="button" onClick={handleGradesEditButtonClick} disabled={isGradeSaving || isRegrading || isNatureCodeTemplateLoading} className={paginationButtonClassName}>{isGradeSaving ? "Saving..." : "Save changes"}</button>
+              </div>}
               {gradeSaveMessage ? (
                 <p
                   className={`text-sm ${
@@ -1364,185 +1372,71 @@ const handlePrintAll = async () => {
               ) : null}
             </div>
           </CardHeader>
+        {currentGrade && <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-blue-600">Grade: {currentGrade.grade_percentage}% {isEditingGrades && <span className="text-sm text-amber-700">Unsaved changes; score updates on save</span>}</p>
+                  <button type="button" onClick={handleRegrade} disabled={isRegrading || isGradeSaving || isTranscriptSaving || isNatureCodeTemplateLoading} aria-describedby={transcriptNeedsRegrade ? "transcript-regrade-notice" : undefined} className={transcriptNeedsRegrade ? `${regradeButtonClassName.replace(/green/g, "amber")} ring-2 ring-amber-400 ring-offset-2` : regradeButtonClassName}>{isRegrading ? "Regrading..." : "Regrade with AI"}</button>
+                </div>
+                {transcriptNeedsRegrade && <p id="transcript-regrade-notice" role="status" className="text-sm font-medium text-amber-800">Transcript edited. Regrade with AI to update the results.</p>}
+                {Object.values(currentGrade.grades || currentGrade.per_question || {}).some((question) => question.manually_overridden) && <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">This result includes manual overrides. Individual questions show their grading source.</p>}
+                <label className="block text-sm lg:max-w-xl">Nature code
+                  <select value={detectedNatureCodeValue} onChange={(e) => { setIsEditingGrades(true); void handleDetectedNatureCodeChange(e.target.value); }} disabled={isNatureCodesLoading || isNatureCodeTemplateLoading || isGradeSaving || isRegrading} className="mt-1 w-full rounded border border-gray-300 px-3 py-2">
+                    <option value="">Select a nature code</option>
+                    {!hasDetectedNatureCodeOption && detectedNatureCodeValue && <option value={detectedNatureCodeValue}>Current: {detectedNatureCodeValue}</option>}
+                    {natureCodeOptions.map((protocol) => <option key={protocol.id} value={protocol.id}>{protocol.id}: {protocol.name}</option>)}
+                  </select>
+                </label>
+                {isNatureCodeTemplateLoading && <p role="status">Loading question set...</p>}
+        </CardContent>}
+      </Card>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+
+        {/* Transcript */}
+        <Card className="flex min-w-0 flex-col gap-3 py-4">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <CardTitle>Question Grades</CardTitle>
+          </CardHeader>
           <CardContent className="flex flex-1 min-h-0 flex-col">
             {currentGrade ? (
               <div className="flex flex-1 min-h-0 flex-col space-y-4">
-                {isEditingGrades ? (
-                  <>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium">
-                        Detected Nature Code
-                      </label>
-                      <select
-                        value={detectedNatureCodeValue}
-                        onChange={(e) =>
-                          void handleDetectedNatureCodeChange(e.target.value)
-                        }
-                        disabled={isNatureCodesLoading || isNatureCodeTemplateLoading}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      >
-                        <option value="">Select a nature code</option>
-                        {!hasDetectedNatureCodeOption && detectedNatureCodeValue && (
-                          <option value={detectedNatureCodeValue}>
-                            Current: {detectedNatureCodeValue}
-                          </option>
-                        )}
-                        {natureCodeOptions.map((protocol) => (
-                          <option key={protocol.id} value={protocol.id}>
-                            {protocol.id}: {protocol.name}
-                          </option>
-                        ))}
-                      </select>
-                      {isNatureCodeTemplateLoading ? (
-                        <p className="text-sm text-gray-500">
-                          Loading question set...
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-1 min-h-0 max-h-[32rem] flex-col space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium">
-                          Questions
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleAddQuestion}
-                          disabled={isNatureCodeTemplateLoading}
-                          className="rounded bg-blue-500 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-600"
-                        >
-                          Add Question
-                        </button>
-                      </div>
-
-                      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto">
-                        {Object.entries(gradeData?.grades || {}).map(
-                          ([key, question]) => (
-                            <div
-                              key={key}
-                              className="flex items-center gap-2 rounded border border-gray-200 p-2"
-                            >
-                              <input
-                                type="text"
-                                value={question.label}
-                                onChange={(e) =>
-                                  handleQuestionLabelChange(
-                                    key,
-                                    e.target.value
-                                  )
-                                }
-                                disabled={isNatureCodeTemplateLoading}
-                                className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
-                                placeholder="Question label"
-                              />
-                              <select
-                                value={question.code || "2"}
-                                onChange={(e) =>
-                                  handleGradeChange(
-                                    `question_${key}`,
-                                    e.target.value
-                                  )
-                                }
-                                disabled={isNatureCodeTemplateLoading}
-                                className="rounded border border-gray-300 px-2 py-1 text-sm"
-                              >
-                                <option value="1">
-                                  Asked Correctly
-                                </option>
-                                <option value="2">Not Asked</option>
-                                <option value="3">Asked Incorrectly</option>
-                                <option value="4">
-                                  Not as Scripted
-                                </option>
-                                <option value="5">Not Applicable</option>
-                                <option value="6">Obvious</option>
-                                <option value="RC">Recorded Correctly</option>
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteQuestion(key)}
-                                disabled={isNatureCodeTemplateLoading}
-                                className="rounded bg-red-500 px-2 py-1 text-xs text-white transition-colors hover:bg-red-600"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )
+                <p className="text-sm text-gray-500">Expand a justification to review it. Use the pencil to edit; click a timestamp to jump to the transcript.</p>
+                <button type="button" onClick={() => { setIsEditingGrades(true); handleAddQuestion(); }} disabled={isGradeSaving || isRegrading || isNatureCodeTemplateLoading} className={paginationButtonClassName}>Add question</button>
+                <div className="space-y-1.5">
+                  {Object.entries(gradeData?.grades || questionGrades).map(([key, question]) => {
+                    const disabled = isGradeSaving || isRegrading || isNatureCodeTemplateLoading;
+                    const beginEdit = () => { setEditingQuestion(key); setIsEditingGrades(true); setGradeSaveMessage(""); };
+                    const original = originalGradeData?.grades[key];
+                    const changed = !original || question.code !== original.code || question.label !== original.label || (question.reasoning || "") !== (original.reasoning || "");
+                    return <div key={key} className="space-y-1 rounded-md border border-gray-200 px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm"><span className="font-medium">{question.label}</span><span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${changed || question.manually_overridden ? "border-amber-200 bg-amber-100 text-amber-800" : "border-blue-200 bg-blue-50 text-blue-700"}`}>{changed ? "Manual edit (unsaved)" : question.manually_overridden ? "Manually overridden" : "AI graded"}</span></div>
+                        {editingQuestion !== key && (
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs ${getQuestionStatusClassName(getDisplayStatus(question))}`}>{getDisplayStatus(question)}</span>
+                          <button type="button" onClick={beginEdit} disabled={disabled} aria-label={`Edit answer and justification for ${question.label}`} title="Edit answer and justification" className="rounded-md border border-gray-200 p-1 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50"><Pencil size={14} aria-hidden="true" /></button>
+                        </div>
                         )}
                       </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleCancelGradesEdit}
-                        disabled={isGradeSaving || isNatureCodeTemplateLoading}
-                        className={paginationButtonClassName}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-blue-600">
-                        Grade: {currentGrade.grade_percentage}%
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <p className="text-sm text-gray-500">
-                          Re-run AI grading using the current nature code and transcript
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleRegrade}
-                          disabled={isRegrading || isGradeSaving || isTranscriptSaving}
-                          className={regradeButtonClassName}
-                        >
-                          {isRegrading ? "Regrading..." : "Regrade"}
-                        </button>
-                      </div>
-                    </div>
+                      {editingQuestion === key ? <div className="space-y-3">
+                        <label className="block text-sm">Question<input autoFocus value={question.label} onChange={(e) => handleQuestionLabelChange(key, e.target.value)} disabled={disabled} className="mt-1 w-full rounded border p-2" /></label>
+                        <label className="block text-sm">Answer<select value={normalizeGradeCode(question.code) || "2"} onChange={(e) => handleGradeChange(`question_${key}`, e.target.value)} disabled={disabled} className="mt-1 w-full rounded border p-2">{Object.entries(GRADE_KEY).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
+                        <label className="block text-sm">Justification<textarea rows={4} value={question.reasoning || ""} onChange={(e) => { const reasoning = e.target.value; setGradeData((previous) => previous ? { ...previous, grades: { ...previous.grades, [key]: { ...previous.grades[key], reasoning } } } : previous); }} disabled={disabled} className="mt-1 w-full rounded border p-2" /></label>
+                        <div className="flex justify-between"><button type="button" onClick={() => handleDeleteQuestion(key)} disabled={disabled} className="text-sm text-red-600">Delete question</button><button type="button" onClick={() => setEditingQuestion(null)} disabled={disabled} className={paginationButtonClassName}>Done</button></div>
+                      </div> : <>
 
-                    <div className="space-y-1">
-                      {Object.entries(questionGrades).map(
-                        ([key, question]) => {
-                          const typedQuestion = question as EditableQuestionGrade;
-                          const displayStatus = getDisplayStatus(typedQuestion);
-                          const reasoning = (typedQuestion.reasoning || "").trim();
-
-                          return (
-                            <details
-                              key={key}
-                              className="group"
-                            >
-                              <summary className="cursor-pointer list-none">
-                                <div className="flex items-start justify-between gap-3 text-sm">
-                                  <div className="flex min-w-0 items-start gap-2">
-                                    <span
-                                      aria-hidden="true"
-                                      className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rotate-[-45deg] border-r-2 border-b-2 border-gray-400 transition-transform group-open:rotate-45"
-                                    />
-                                    <span>{typedQuestion.label}</span>
-                                  </div>
-                                  <span
-                                    className={getQuestionStatusClassName(
-                                      displayStatus
-                                    )}
-                                  >
-                                    {displayStatus}
-                                  </span>
-                                </div>
-                              </summary>
-                              <div className="ml-5 mt-1 whitespace-pre-line text-sm text-gray-600">
-                                {reasoning ? `Reasoning: ${reasoning}` : "No reasoning provided for this question."}
-                              </div>
-                            </details>
-                          );
-                        }
-                      )}
-                    </div>
-                  </>
-                )}
+                        <details className="group text-sm">
+                          <summary className="flex cursor-pointer list-none items-center gap-1 rounded py-0.5 text-xs text-gray-500 focus-visible:ring-2 focus-visible:ring-blue-500"><ChevronRight size={14} className="transition-transform group-open:rotate-90" aria-hidden="true" />Justification</summary>
+                          <div className="ml-5 space-y-2">
+                            <p className="whitespace-pre-line text-gray-600">{renderJustification(question.reasoning?.trim() || "No justification provided.")}</p>
+                            <button type="button" onClick={beginEdit} disabled={disabled} className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500"><Pencil size={12} aria-hidden="true" />Edit justification</button>
+                          </div>
+                        </details>
+                      </>}
+                    </div>;
+                  })}
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">
@@ -1553,19 +1447,19 @@ const handlePrintAll = async () => {
         </Card>
 
         {/* Audio */}
-        <Card className="flex h-full flex-col">
+        <Card className="flex min-w-0 flex-col gap-3 py-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div className="min-w-0">
               <CardTitle>Audio and Transcript</CardTitle>
               <div>Timestamp: {formatCallDateTime(matchedAudioFileParts)}</div>
-              <CardDescription>{matchedAudio}</CardDescription>
-              <CardDescription>{currentTranscript}</CardDescription>
+              <CardDescription className="break-all">{matchedAudio}</CardDescription>
+              <CardDescription className="break-all">{currentTranscript}</CardDescription>
             </div>
             <div className="flex flex-col items-end gap-2">
               <button
                 type="button"
                 onClick={handleEditButtonClick}
-                disabled={!currentTranscript || isTranscriptSaving}
+                disabled={!currentTranscript || isTranscriptSaving || isRegrading}
                 className={paginationButtonClassName}
               >
                 {isTranscriptSaving
@@ -1590,13 +1484,14 @@ const handlePrintAll = async () => {
 
           <CardContent className="flex flex-1 min-h-0 flex-col">
 
-            {matchedAudio ? (
+            {currentTranscript ? (
               <div className="flex flex-1 min-h-0 flex-col">
                 <PlayerController
                   ref={playerControllerRef}
                   transcriptFile={currentTranscript}
                   audioFile={matchedAudio}
-                  editable={isEditingTranscript}
+                  editable={isEditingTranscript && !isRegrading}
+                  onTranscriptChange={() => setTranscriptNeedsRegrade(true)}
                   dispatcherName={activeDispatcherName}
                 />
               </div>
