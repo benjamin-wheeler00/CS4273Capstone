@@ -3,7 +3,7 @@ import Link from "next/link";
 import React from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import normanPDLogo from "@/../public/norman-pd-logo.svg";
+import normanPDLogo from "@/../public/norman-911-logo.png";
 import evaluateIconBlack from "@/../public/evaluate-icon-black.svg";
 import evaluateIconWhite from "@/../public/evaluate-icon-white.svg";
 import recordsIconWhite from "@/../public/records-icon-white.svg";
